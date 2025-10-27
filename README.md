@@ -1,91 +1,155 @@
-[<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cookie Clicker 101</title>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: #222;
-      color: #fff;
-      font-family: monospace;
-      text-align: center;
-      height: 100vh;
-      overflow: hidden;
-    }
-    h1 {
-      margin-top: 20px;
-      font-size: 24px;
-    }
-    #cookie {
-      font-size: 100px;
-      cursor: pointer;
-      margin: 30px 0;
-      user-select: none;
-    }
-    #stats {
-      font-size: 18px;
-    }
-    #upgrade {
-      margin-top: 20px;
-      padding: 10px 20px;
-      background: #444;
-      color: #fff;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-family: monospace;
-    }
-    #upgrade:disabled {
-      background: #333;
-      color: #888;
-      cursor: default;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Cookie Clicker 101</title>
+<style>
+html, body {
+  margin:0;
+  padding:0;
+  overflow:hidden;
+  background:#111;
+  font-family: monospace;
+  color:#fff;
+  user-select:none;
+}
+canvas {
+  display:block;
+  background:#000;
+}
+#hud {
+  position:absolute;
+  top:10px;
+  left:10px;
+  font-size:16px;
+}
+#upgrades {
+  position:absolute;
+  bottom:10px;
+  left:10px;
+  font-size:14px;
+  color:yellow;
+}
+</style>
 </head>
 <body>
-  <h1>Cookie Clicker 101</h1>
-  <div id="cookie">🍪</div>
-  <div id="stats">
-    Cookies: <span id="count">0</span><br>
-    Cookies per click: <span id="cpc">1</span>
-  </div>
-  <button id="upgrade" disabled>Upgrade Click (Cost: 50)</button>
+<canvas id="game"></canvas>
+<div id="hud">Cookies: 0 | Multiplier: 1x</div>
+<div id="upgrades"></div>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+let width = window.innerWidth;
+let height = window.innerHeight;
+canvas.width = width;
+canvas.height = height;
 
-  <script>
-    let cookies = 0;
-    let cookiesPerClick = 1;
-    let upgradeCost = 50;
+const pixel = 4;
+let cookies = 0;
+let multiplier = 1;
+let highscore = localStorage.getItem('cookie101Highscore') || 0;
+let upgrades = [
+  { cost: 50, bonus: 2, bought: false },
+  { cost: 200, bonus: 5, bought: false },
+  { cost: 1000, bonus: 10, bought: false }
+];
 
-    const cookie = document.getElementById("cookie");
-    const countSpan = document.getElementById("count");
-    const cpcSpan = document.getElementById("cpc");
-    const upgradeBtn = document.getElementById("upgrade");
+const hud = document.getElementById('hud');
+const upgradeDiv = document.getElementById('upgrades');
 
-    cookie.onclick = () => {
-      cookies += cookiesPerClick;
-      update();
-    };
+// Cookie object
+const cookie = {
+  x: width/2 - pixel*10,
+  y: height/2 - pixel*10,
+  size: pixel*20,
+  color: '#c49b6a',
+  clickEffect: 0
+};
 
-    upgradeBtn.onclick = () => {
-      if (cookies >= upgradeCost) {
-        cookies -= upgradeCost;
-        cookiesPerClick++;
-        upgradeCost = Math.floor(upgradeCost * 1.5);
-        update();
-      }
-    };
+// Draw pixel cookie
+function drawCookie(){
+  ctx.fillStyle = cookie.color;
+  ctx.fillRect(cookie.x, cookie.y, cookie.size, cookie.size);
 
-    function update() {
-      countSpan.textContent = cookies;
-      cpcSpan.textContent = cookiesPerClick;
-      upgradeBtn.textContent = `Upgrade Click (Cost: ${upgradeCost})`;
-      upgradeBtn.disabled = cookies < upgradeCost;
+  // chocolate chips (random pattern)
+  ctx.fillStyle = '#4b2e05';
+  for(let i=0; i<6; i++){
+    let cx = cookie.x + (Math.random()*cookie.size*0.8);
+    let cy = cookie.y + (Math.random()*cookie.size*0.8);
+    ctx.fillRect(Math.floor(cx/pixel)*pixel, Math.floor(cy/pixel)*pixel, pixel, pixel);
+  }
+
+  // click flash
+  if(cookie.clickEffect > 0){
+    ctx.fillStyle = `rgba(255,255,255,${cookie.clickEffect})`;
+    ctx.fillRect(cookie.x, cookie.y, cookie.size, cookie.size);
+    cookie.clickEffect -= 0.05;
+  }
+}
+
+canvas.addEventListener('click', e=>{
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  if(x>cookie.x && x<cookie.x+cookie.size && y>cookie.y && y<cookie.y+cookie.size){
+    cookies += multiplier;
+    cookie.clickEffect = 0.3;
+    if(cookies > highscore){
+      highscore = cookies;
+      localStorage.setItem('cookie101Highscore', highscore);
     }
-  </script>
+    updateHUD();
+  }
+});
+
+function updateHUD(){
+  hud.textContent = `Cookies: ${cookies} | Multiplier: ${multiplier}x | Highscore: ${highscore}`;
+  let html = "";
+  upgrades.forEach((u,i)=>{
+    if(!u.bought && cookies >= u.cost){
+      html += `Press [${i+1}] to buy +${u.bonus}x for ${u.cost} cookies<br>`;
+    }
+  });
+  upgradeDiv.innerHTML = html;
+}
+
+// Buy upgrades with keys
+window.addEventListener('keydown', e=>{
+  const num = parseInt(e.key);
+  if(!isNaN(num) && upgrades[num-1] && !upgrades[num-1].bought){
+    const u = upgrades[num-1];
+    if(cookies >= u.cost){
+      cookies -= u.cost;
+      multiplier += u.bonus;
+      u.bought = true;
+      updateHUD();
+    }
+  }
+});
+
+function draw(){
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0,0,width,height);
+  drawCookie();
+}
+
+function loop(){
+  draw();
+  requestAnimationFrame(loop);
+}
+
+window.addEventListener('resize', ()=>{
+  width = window.innerWidth;
+  height = window.innerHeight;
+  canvas.width = width;
+  canvas.height = height;
+  cookie.x = width/2 - cookie.size/2;
+  cookie.y = height/2 - cookie.size/2;
+});
+
+updateHUD();
+loop();
+</script>
 </body>
 </html>
-
-](https://lvcodinguser.github.io/cookie-clicker-101)
