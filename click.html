@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Mini Pixel Cookie Clicker</title>
+<title>Cookie Clicker 101</title>
 <style>
 html, body {
   margin:0;
@@ -47,7 +47,7 @@ canvas.height = height;
 const pixel = 4;
 let cookies = 0;
 let multiplier = 1;
-let highscore = localStorage.getItem('cookieHighscore') || 0;
+let highscore = localStorage.getItem('cookie101Highscore') || 0;
 let upgrades = [
   { cost: 50, bonus: 2, bought: false },
   { cost: 200, bonus: 5, bought: false },
@@ -97,7 +97,7 @@ canvas.addEventListener('click', e=>{
     cookie.clickEffect = 0.3;
     if(cookies > highscore){
       highscore = cookies;
-      localStorage.setItem('cookieHighscore', highscore);
+      localStorage.setItem('cookie101Highscore', highscore);
     }
     updateHUD();
   }
